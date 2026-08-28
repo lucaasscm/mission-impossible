@@ -1,0 +1,14 @@
+<div class="w-full">
+  <h1 class="font-bold text-4xl mb-6">Videos</h1>
+  <% if @videos.empty? %>
+    <p class="text-gray-500">Nothing published yet.</p>
+  <% end %>
+  <ul class="grid gap-3">
+    <% @videos.each do |video| %>
+      <li>
+        <%= link_to video.title, video, class: "text-blue-600 underline hover:no-underline text-lg" %>
+        <span class="text-sm text-gray-500">by <%= video.user.email_address %> · <%= time_ago_in_words(video.created_at) %> ago</span>
+      </li>
+    <% end %>
+  </ul>
+</div>

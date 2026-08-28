@@ -1,0 +1,5 @@
+<div class="w-full">
+  <h1 class="font-bold text-4xl mb-2"><%= @video.title %></h1>
+  <p class="text-sm text-gray-500 mb-6">by <%= @video.user.email_address %> · <%= number_to_human_size(@video.file.byte_size) %></p>
+  <%= video_tag url_for(@video.file), controls: true, class: "w-full max-w-4xl bg-black rounded-lg" %>
+</div>

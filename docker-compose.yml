@@ -1,0 +1,38 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"   # host 5432 is taken by a local Postgres
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+  videira:
+    build: apps/videira
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+    ports:
+      - "3000:80"
+    volumes:
+      - ./apps/videira/config/master.key:/rails/config/master.key:ro
+      - videira_storage:/rails/storage   # local disk — the M2 pain
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/up"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 20s
+
+volumes:
+  pgdata:
+  videira_storage:

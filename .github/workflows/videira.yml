@@ -1,8 +1,8 @@
 name: videira
 
 on:
-  pull_request:
-    paths: [ "apps/videira/**", ".github/workflows/videira.yml" ]
+  pull_request:   # every PR: jobs below skip themselves when videira is untouched, and
+                  # skipped jobs still satisfy main's required checks (a path filter here would not)
   push:
     branches: [ main ]
     paths: [ "apps/videira/**", ".github/workflows/videira.yml" ]
@@ -12,7 +12,24 @@ defaults:
     working-directory: apps/videira
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      videira: ${{ github.event_name == 'push' || steps.filter.outputs.videira == 'true' }}
+    steps:
+      - id: filter
+        if: github.event_name == 'pull_request'
+        working-directory: .
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr diff ${{ github.event.number }} --repo ${{ github.repository }} --name-only \
+            | grep -qE '^(apps/videira/|\.github/workflows/videira\.yml)' && r=true || r=false
+          echo "videira=$r" >> "$GITHUB_OUTPUT"
+
   scan_ruby:
+    needs: changes
+    if: needs.changes.outputs.videira == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -26,6 +43,8 @@ jobs:
         run: bin/bundler-audit
 
   scan_js:
+    needs: changes
+    if: needs.changes.outputs.videira == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -37,6 +56,8 @@ jobs:
         run: bin/importmap audit
 
   lint:
+    needs: changes
+    if: needs.changes.outputs.videira == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -48,6 +69,8 @@ jobs:
         run: bin/rubocop -f github
 
   test:
+    needs: changes
+    if: needs.changes.outputs.videira == 'true'
     runs-on: ubuntu-latest
     services:
       postgres:

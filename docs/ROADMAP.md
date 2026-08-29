@@ -37,6 +37,10 @@ impossible/            # or whatever the repo ends up being called
   directly. Ugly and synchronous on purpose — Tailwind for styling, not for polish.
 - **Concepts:** domain modeling (User, Video, states), the baseline that will be broken.
 - **Done when:** I upload an .mp4 and watch it in the browser. ADR-0001 (why a monolith).
+- **✅ Done 2026-08-29** — PRs #1 (monolith + compose + CI + ADR), #4 (dropped unused
+  `image_processing`), #5 (CI gate job). Repo made public, `main` ruleset with required
+  checks. Observed while here: Active Storage's disk service ignores Range requests, so
+  the player can't seek — M3 fuel. Host Postgres owns 5432, so compose exposes 5433.
 
 ### M1 — Async transcoding
 - **Pain (demonstrate):** upload a 500MB video — the request hangs/times out. Upload a
@@ -239,6 +243,9 @@ The only exception to the "pain before solution" rule: starts at M0 and holds fo
   if the Go experiment (M7-G) happens. Free/unlimited on a public repo.
 - **Branch protection (Settings → Branches/Rulesets on `main`):** *required status
   checks* — PR merge blocked while CI isn't green. Without this, CI is decorative.
+  *(Done in M0 as a ruleset. Gotcha learned: path filters on `pull_request:` leave
+  required checks pending forever on PRs that don't match — gate the jobs instead, so
+  they report "skipped".)*
 - **Workflow:** even solo, everything through PRs. Each milestone = one PR (or a few),
   with the ADR included in the diff. The history of green PRs becomes part of the
   portfolio.

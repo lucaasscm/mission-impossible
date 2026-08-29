@@ -1,1 +1,28 @@
 @import "tailwindcss";
+
+/* Videira = grapevine: wine-dark ground, one grape-violet accent. */
+@theme {
+  --color-plum-950: #0f0d15;
+  --color-plum-900: #171420;
+  --color-plum-800: #211d2e;
+  --color-plum-700: #2f2a40;
+  --color-plum-400: #8f87a3;
+  --color-plum-100: #ede9f5;
+  --color-grape-500: #7c3aed;
+  --color-grape-400: #a78bfa;
+  --color-grape-300: #c4b5fd;
+  --font-display: "Instrument Serif", Georgia, serif;
+}
+
+@layer components {
+  .title { @apply font-display italic text-5xl leading-none tracking-tight; }
+  .link  { @apply text-grape-300 hover:text-grape-400 underline underline-offset-4 decoration-plum-700 hover:decoration-grape-400 transition-colors; }
+  .btn   { @apply inline-block rounded-md bg-grape-500 hover:bg-grape-400 px-4 py-2 font-medium text-white transition-colors cursor-pointer
+                  focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-grape-300; }
+  .label { @apply block text-sm text-plum-400 mb-1.5; }
+  .field { @apply block w-full rounded-md bg-plum-900 border border-plum-700 px-3 py-2 text-plum-100 placeholder:text-plum-400
+                  focus:outline-2 focus:outline-offset-0 focus:outline-grape-400 focus:border-grape-400
+                  file:mr-3 file:rounded file:border-0 file:bg-plum-700 file:px-3 file:py-1 file:text-plum-100; }
+  .flash       { @apply rounded-md border border-grape-500/40 bg-grape-500/10 px-3 py-2 text-sm text-grape-300 mb-6; }
+  .flash-error { @apply rounded-md border border-red-400/40 bg-red-400/10 px-3 py-2 text-sm text-red-300 mb-6; }
+}

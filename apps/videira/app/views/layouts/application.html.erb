@@ -1,43 +1,37 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
     <title><%= content_for(:title) || "Videira" %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="color-scheme" content="dark">
+    <meta name="theme-color" content="#0f0d15">
     <meta name="application-name" content="Videira">
-    <meta name="mobile-web-app-capable" content="yes">
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
-
     <%= yield :head %>
-
-    <%# Enable PWA manifest for installable apps (make sure to enable in config/routes.rb too!) %>
-    <%#= tag.link rel: "manifest", href: pwa_manifest_path(format: :json) %>
-
     <link rel="icon" href="/icon.png" type="image/png">
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/icon.png">
-
-    <%# Includes all stylesheet files in app/assets/stylesheets %>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
   </head>
-
-  <body>
-    <nav class="container mx-auto px-5 py-4 flex items-center gap-4 border-b">
-      <%= link_to "Videira", root_path, class: "font-bold text-xl" %>
+  <body class="min-h-screen bg-plum-950 text-plum-100 antialiased">
+    <nav class="mx-auto max-w-3xl px-5 py-5 flex items-center gap-5 border-b border-plum-800">
+      <%= link_to "Videira", root_path, class: "font-semibold tracking-tight text-xl text-grape-300" %>
       <span class="grow"></span>
       <% if authenticated? %>
-        <%= link_to "Publish", new_video_path, class: "text-blue-600 underline hover:no-underline" %>
-        <%= button_to "Sign out", session_path, method: :delete, class: "text-gray-600 underline hover:no-underline cursor-pointer" %>
+        <%= button_to "Sign out", session_path, method: :delete, class: "text-sm text-plum-400 hover:text-plum-100 transition-colors cursor-pointer" %>
+        <%= link_to "Publish", new_video_path, class: "btn text-sm py-1.5" %>
       <% else %>
-        <%= link_to "Sign in", new_session_path, class: "text-blue-600 underline hover:no-underline" %>
+        <%= link_to "Sign in", new_session_path, class: "link text-sm" %>
       <% end %>
     </nav>
-    <main class="container mx-auto mt-10 px-5 flex">
-      <% if notice = flash[:notice] %>
-        <p class="py-2 px-3 bg-green-50 mb-5 text-green-500 font-medium rounded-lg absolute top-16" id="notice"><%= notice %></p>
-      <% end %>
+    <main class="mx-auto max-w-3xl px-5 py-12">
+      <% if notice = flash[:notice] %><div class="flash" id="notice"><%= notice %></div><% end %>
+      <% if alert = flash[:alert] %><div class="flash-error" id="alert"><%= alert %></div><% end %>
       <%= yield %>
     </main>
   </body>

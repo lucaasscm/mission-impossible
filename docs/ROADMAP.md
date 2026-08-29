@@ -72,6 +72,17 @@ impossible/            # or whatever the repo ends up being called
 
 ## PHASE 2 — Bugio is born
 
+### Design system (small, before M4-B — the one non-pain-driven step besides tests/CI)
+- **Why here:** Bugio's panel is about to exist; two apps that should look related, and
+  the panel becomes React in M9-R. Designing the system against real content from both
+  apps beats guessing it in M0. Videira's plum/grape `@theme` tokens are the seed.
+- **What:** a Claude Design canvas (palette, type scale, spacing, the handful of
+  components: button, field, list row, flash, player frame) kept in sync with the
+  Tailwind `@theme` tokens + component classes. Tokens live in `packages/` once Bugio's
+  React panel needs them.
+- **Done when:** both apps consume the same tokens; the canvas is the reference. No ADR
+  needed — it's not an architectural decision. Not learning core: Claude writes it.
+
 ### M4-B — Receive, store, list
 - **Pain (real, from M1–M3):** ffmpeg fails on an exotic codec, a job blows its timeout,
   an upload hits a network error — and you only find out by grepping container logs.

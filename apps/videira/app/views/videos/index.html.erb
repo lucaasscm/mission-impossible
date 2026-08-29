@@ -1,14 +1,19 @@
-<div class="w-full">
-  <h1 class="font-bold text-4xl mb-6">Videos</h1>
-  <% if @videos.empty? %>
-    <p class="text-gray-500">Nothing published yet.</p>
+<h1 class="title mb-10">Videos</h1>
+
+<% if @videos.empty? %>
+  <p class="text-plum-400">
+    Nothing published yet.
+    <% if authenticated? %><%= link_to "Publish the first one", new_video_path, class: "link" %>.<% end %>
+  </p>
+<% end %>
+
+<ul class="divide-y divide-plum-800 border-y border-plum-800">
+  <% @videos.each do |video| %>
+    <li>
+      <%= link_to video, class: "flex items-baseline justify-between gap-6 py-4 -mx-3 px-3 rounded-md hover:bg-plum-900 transition-colors" do %>
+        <span class="text-lg"><%= video.title %></span>
+        <span class="shrink-0 text-sm text-plum-400"><%= video.user.email_address %> · <%= time_ago_in_words(video.created_at) %> ago</span>
+      <% end %>
+    </li>
   <% end %>
-  <ul class="grid gap-3">
-    <% @videos.each do |video| %>
-      <li>
-        <%= link_to video.title, video, class: "text-blue-600 underline hover:no-underline text-lg" %>
-        <span class="text-sm text-gray-500">by <%= video.user.email_address %> · <%= time_ago_in_words(video.created_at) %> ago</span>
-      </li>
-    <% end %>
-  </ul>
-</div>
+</ul>

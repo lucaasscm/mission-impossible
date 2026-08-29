@@ -9,7 +9,7 @@ class VideosControllerTest < ActionDispatch::IntegrationTest
   test "index and show are public" do
     get root_url
     assert_response :success
-    assert_select "a", @video.title
+    assert_select "a", /#{@video.title}/
 
     get video_url(@video)
     assert_response :success

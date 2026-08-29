@@ -1,0 +1,71 @@
+name: videira
+
+on:
+  pull_request:
+    paths: [ "apps/videira/**", ".github/workflows/videira.yml" ]
+  push:
+    branches: [ main ]
+    paths: [ "apps/videira/**", ".github/workflows/videira.yml" ]
+
+defaults:
+  run:
+    working-directory: apps/videira
+
+jobs:
+  scan_ruby:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+          working-directory: apps/videira
+      - name: Brakeman
+        run: bin/brakeman --no-pager
+      - name: bundler-audit
+        run: bin/bundler-audit
+
+  scan_js:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+          working-directory: apps/videira
+      - name: importmap audit
+        run: bin/importmap audit
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+          working-directory: apps/videira
+      - name: RuboCop
+        run: bin/rubocop -f github
+
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: [ "5432:5432" ]
+        options: --health-cmd="pg_isready" --health-interval=10s --health-timeout=5s --health-retries=3
+    steps:
+      - uses: actions/checkout@v6   # first: working-directory (apps/videira) must exist
+      - name: Install packages
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y libpq-dev libvips
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+          working-directory: apps/videira
+      - name: Tests
+        env:
+          RAILS_ENV: test
+          DB_PORT: 5432
+        run: bin/rails db:test:prepare test

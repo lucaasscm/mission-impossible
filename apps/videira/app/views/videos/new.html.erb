@@ -1,0 +1,17 @@
+<div class="mx-auto md:w-2/3 w-full">
+  <h1 class="font-bold text-4xl">Publish a video</h1>
+  <%= form_with model: @video, class: "contents" do |form| %>
+    <% if @video.errors.any? %>
+      <ul class="py-2 px-3 bg-red-50 my-5 text-red-500 font-medium rounded-lg">
+        <% @video.errors.full_messages.each do |msg| %><li><%= msg %></li><% end %>
+      </ul>
+    <% end %>
+    <div class="my-5">
+      <%= form.text_field :title, required: true, autofocus: true, placeholder: "Title", class: "block shadow-sm rounded-md border border-gray-400 focus:outline-blue-600 px-3 py-2 mt-2 w-full" %>
+    </div>
+    <div class="my-5">
+      <%= form.file_field :file, required: true, accept: "video/*", class: "block w-full" %>
+    </div>
+    <%= form.submit "Publish", class: "rounded-md px-3.5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white inline-block font-medium cursor-pointer" %>
+  <% end %>
+</div>

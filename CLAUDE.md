@@ -24,7 +24,8 @@ merely to have them implemented. Therefore:
 - Scaffolding and boilerplate (generators, trivial CRUD, obvious migrations)
 - Configs: docker-compose, GitHub Actions, Dockerfiles, linters
 - Seeds, factories, load scripts (k6), the synthetic traffic generator
-- Videira's frontend (Hotwire) — not a learning focus
+- Videira's frontend (Hotwire, Tailwind) — not a learning focus
+- The design system (Claude Design canvas + Tailwind `@theme` tokens), before M4-B
 - Regression tests AFTER the behavior has been implemented and understood
 
 ### Claude does NOT write — only reviews, questions, and gives direction
@@ -43,6 +44,24 @@ the finished solution. Includes (non-exhaustive):
 When in doubt about which category something falls into, ask before writing code.
 If explicitly asked to "just do it", confirm once ("this is learning core — are you
 sure you want me to write it?") and then comply.
+
+## Git and GitHub rules
+
+- **Claude never commits, creates branches, pushes, or opens/merges PRs unless the
+  owner explicitly asks in that turn.** Leave work staged/uncommitted and hand off with
+  a suggested commit message. Standing exception: small CI-fix commits on an already
+  open PR may be committed and pushed without asking.
+- Repo: `github.com/lucaasscm/mission-impossible`, **public** (branch rules need it on
+  GitHub Free). Owner is the only collaborator; PR creation open to all users.
+- `main` ruleset: changes only via PR, no force-push/deletion, required checks
+  `lint`, `scan_js`, `scan_ruby`, `test` (not strict). No bypass actors — binds the
+  owner too.
+- CI (`.github/workflows/<app>.yml`) runs on **every** PR; a `changes` job gates the
+  app jobs so PRs that don't touch the app get *skipped* checks (which satisfy the
+  ruleset). Do not put `paths:` on `pull_request:` — required checks would stay
+  pending forever. `push` to `main` stays path-filtered.
+- Dependabot PRs: assess whether the dependency is used at all before merging. An
+  unused dependency gets removed, not bumped (precedent: `image_processing`, PR #3/#4).
 
 ## Process rules (non-negotiable)
 
@@ -65,6 +84,8 @@ sure you want me to write it?") and then comply.
 - **React** (Bugio panel, from M9-R on): Vite + TS.
 - **Go** (`services/bugio-ingest-go`): OPTIONAL, only the M7-G benchmark experiment.
   Do not suggest Go outside of it.
+- **Removed on purpose**: `image_processing`/`libvips` (unused — re-add with
+  `ruby-vips` only if Active Storage previews/thumbnails are ever wanted).
 - **Local infra**: docker-compose with Postgres and MinIO. Redis only enters at M7
   (a queue the Node ingestor can write to) and stays for M9 pub/sub. No real cloud;
   Floci (GCP emulator) only in the optional M13.
@@ -94,6 +115,7 @@ one workflow per app, path-filtered.
 
 ```
 ├── CLAUDE.md
+├── .github/workflows/      # one path-gated workflow per app (videira.yml, ...)
 ├── docs/
 │   ├── ROADMAP.md           # full plan, pain-driven
 │   └── adr/                 # 0001-title.md, ...

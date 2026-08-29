@@ -59,7 +59,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7   # first: working-directory (apps/videira) must exist
       - name: Install packages
-        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y libpq-dev libvips
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y libpq-dev
       - uses: ruby/setup-ruby@v1
         with:
           bundler-cache: true

@@ -12,7 +12,7 @@
 
 ```
 impossible/            # or whatever the repo ends up being called
-├── docker-compose.yml # brings up everything: apps, postgres, minio (+ redis from M7)
+├── docker-compose.yml # everything: apps, postgres, minio (+ redis at M7 if justified, else M9)
 ├── apps/
 │   ├── videira/       # Rails — video platform
 │   └── bugio/         # Rails — error tracker (born in Phase 2)
@@ -30,6 +30,10 @@ impossible/            # or whatever the repo ends up being called
 
 ## PHASE 1 — Videira becomes a decent guinea pig
 
+> **Core scope:** M0 through M6-B is the finished portfolio project. M7 through M9 are
+> expansion milestones pursued only when the preceding measurements justify them.
+> M7-G and M10 through M13 are research experiments, never completion requirements.
+
 ### M0 — A monolith that works
 - **Pain:** none yet — this is the starting point. Publish and watch a video.
 - **Solution:** monolithic Rails (`rails new --css=tailwind`). Simple auth, upload via
@@ -43,29 +47,40 @@ impossible/            # or whatever the repo ends up being called
   the player can't seek — M3 fuel. Host Postgres owns 5432, so compose exposes 5433.
 
 ### M1 — Async transcoding
-- **Pain (demonstrate):** upload a 500MB video — the request hangs/times out. Upload a
-  .mov — half the browsers won't play it.
+- **Pain (demonstrate):** after Rails has received a large video, doing media processing
+  before responding makes the request hang or time out. Upload a .mov — half the browsers
+  won't play the original. Measure upload transfer time separately from processing time;
+  the file still passes through Rails until M2, so M1 cannot make the transfer itself fast.
 - **Solution:** Solid Queue (Rails 8 default, DB-backed — no Redis) + ffmpeg in a
   background job. State machine on Video: `uploaded → processing → ready → failed`. UI
   shows the state.
 - **Concepts:** queues, idempotent jobs, retries, state machines.
-- **Done when:** upload responds in <1s and the video becomes `ready` on its own; killing
-  the worker mid-job and restarting corrupts nothing. ADR-0002.
+- **Done when:** once the upload transfer finishes, the response is not delayed by
+  transcoding and the video becomes `ready` on its own; killing the worker mid-job and
+  restarting corrupts neither state nor output. Compose runs a separate worker with
+  ffmpeg, and development uses Solid Queue explicitly. ADR-0002.
 
 ### M2 — Object storage
-- **Pain (demonstrate):** `docker compose down -v` → all videos are gone. The container
-  disk fills up.
+- **Pain (demonstrate):** local media is coupled to an application instance: without the
+  current volume mount it disappears when that instance is replaced, multiple Videira
+  instances do not share a filesystem, and uploaded media grows the application disk.
+  Do not use `docker compose down -v` as evidence: it deliberately deletes MinIO's named
+  volume too.
 - **Solution:** MinIO in the compose file (S3-compatible API). Direct upload with
   presigned URLs — the file never even passes through Rails.
 - **Concepts:** object storage, presigned URLs, getting heavy traffic out of the request
   path.
-- **Done when:** uploads go straight to MinIO; Rails only records metadata. ADR-0003.
+- **Done when:** uploads go straight from the browser to MinIO; Rails only authorizes the
+  upload and records metadata. Browser-reachable presigned URLs and MinIO CORS work from
+  outside the Compose network; replacing Videira leaves media intact. ADR-0003.
 
 ### M3 — Real streaming
 - **Pain (demonstrate):** open the Network tab while playing a long video — the browser
   downloads the whole MP4. On a slow connection (throttle), it stalls.
-- **Solution:** in the M1 job, transcode to HLS at 2–3 qualities (480p/720p/1080p). HLS
-  player on the frontend (hls.js).
+- **Solution:** evolve the M1 transcoding pipeline to HLS at 2–3 qualities
+  (480p/720p/1080p), with an explicit representation for the master playlist, rendition
+  playlists, and media segments in object storage. Use hls.js on the frontend and decide
+  how playlists and segments are authorized/reached by the browser.
 - **Concepts:** adaptive streaming, segmentation, the mental model underlying CDNs.
 - **Done when:** video plays in segments and switches quality under throttling. ADR-0004.
 
@@ -92,14 +107,18 @@ impossible/            # or whatever the repo ends up being called
   an upload hits a network error — and you only find out by grepping container logs.
   Reproduce it: upload a corrupted file to Videira and try to figure out what happened
   without looking at the terminal.
-- **Solution:** `bugio` app (Rails, Tailwind) with a `POST /api/events` endpoint + a
+- **Solution:** `bugio` app (Rails, Tailwind) with a minimal `Project` and revocable
+  ingest key, an authenticated and size-limited `POST /api/events` endpoint, plus a
   `bugio-ruby` gem (the SDK) that captures unhandled exceptions (Rack middleware + job
   hook) and sends them with context (request, filtered params, backtrace). Install the
-  gem in Videira. Panel: a raw list of events.
+  gem in Videira. SDK delivery has short timeouts, bounded payloads, and must never make
+  the host application fail when Bugio is unavailable. Panel: a raw list of events.
 - **Concepts:** SDK design, Rack middleware, exception serialization, API contracts.
 - **Done when:** a forced error in Videira shows up in Bugio's panel within seconds,
-  without looking at logs. ADR-0005 (the event format — this contract is the heart of
-  the system).
+  invalid credentials and oversized payloads are rejected, and Bugio being offline does
+  not break Videira. ADR-0005 defines the versioned event envelope, including project
+  identity; the ingest key belongs to the authenticated transport, not the event body
+  (the contract is the heart of the system).
 
 ### M5-B — Grouping (fingerprinting)
 - **Pain (demonstrate):** run the synthetic generator with 5% broken requests for 10
@@ -115,31 +134,39 @@ impossible/            # or whatever the repo ends up being called
 - **Pain (demonstrate):** k6 against the ingestion endpoint — writing the event +
   computing the fingerprint + updating the Issue inside the request cycle tanks latency;
   under a spike, events get lost.
-- **Solution:** the endpoint only validates and enqueues (Solid Queue — already
-  there); a worker does the processing (fingerprint, persistence, aggregation). Basic
-  backpressure.
+- **Solution:** the endpoint only authenticates, bounds, validates, and enqueues (Solid
+  Queue — already there); a worker does fingerprinting, persistence, and aggregation.
+  Choose and document a concrete overload response (`429`/`503`, queue-depth limit, or
+  another measured policy) rather than calling it only "basic backpressure".
 - **Concepts:** decoupled ingestion, at-least-once delivery, deduplication by event_id.
-- **Done when:** k6 at double the previous load without losing events (count them!).
-  ADR-0007.
+- **Done when:** a fixed k6 profile records accepted events/second, p95 endpoint latency,
+  queue depth, processed count, duplicate count, lost count, and recovery time after an
+  overload. The result may disprove the expected improvement; record what actually
+  happens. ADR-0007.
 
 ---
 
-## PHASE 3 — First extracted service (Node/TS)
+## PHASE 3 — Candidate first extracted service (Node/TS)
 
 ### M7 — Ingestor in Node/TypeScript
-- **Pain (demonstrate):** k6 straight at the Rails ingestion endpoint — even just
-  validating and enqueueing, per-process throughput is low and expensive; ingestion needs
-  NOTHING from Rails.
-- **Solution:** `services/bugio-ingest` in Node/TS: receives JSON, validates the schema
-  (zod), applies per-project rate limiting (token bucket), publishes to the queue. Solid
-  Queue is Rails-only, so this is where **Redis enters the compose file** — a queue Node
-  can write to and a Rails worker can consume. Rails stops exposing `/api/events`. Ideal
-  case for Node: pure IO-bound.
+- **Pain (demonstrate):** compare equivalent Rails and Node candidates doing only
+  authentication, schema validation, rate limiting, and enqueueing. Extract only if the
+  M6 measurements show Rails misses an explicit SLO and the endpoint needs nothing from
+  Rails. If Rails meets the SLO, write the "extraction not justified" ADR and stop here.
+- **Solution (only if justified):** `services/bugio-ingest` in Node/TS receives JSON,
+  validates the schema (zod), applies per-project token-bucket rate limiting, and appends
+  to a Redis Stream. A dedicated Ruby consumer uses a Redis consumer group to acknowledge,
+  reclaim, and process messages through Bugio's existing application service. It is not a
+  Solid Queue worker: Solid Queue is database-backed and cannot consume Redis. Rails stops
+  exposing `/api/events`. This is the ideal Node case: small and IO-bound.
 - **Concepts:** first service extracted WITH justification; contracts between services;
   the event loop, backpressure; TS on a small-surface backend — direct synergy with the
   new job.
-- **Done when:** side-by-side Rails vs Node benchmark documented in ADR-0008 (real
-  numbers!); the SDK points at the ingestor with no contract change.
+- **Done when:** ADR-0008 records a fair Rails-vs-Node benchmark with real numbers. If
+  extraction is justified, acknowledged, abandoned, reclaimed, duplicate, and poison
+  messages have defined behavior and the SDK points at the ingestor with no contract
+  change. If it is not justified, the measured decision not to extract is the completed
+  outcome.
 
 ### M7-G (OPTIONAL, once the new-job onboarding settles) — Go rewrite of the ingestor
 - **Pain:** legitimate curiosity + prior investment in Go (Phases 0–2 of the study plan).
@@ -154,18 +181,21 @@ impossible/            # or whatever the repo ends up being called
 ## PHASE 4 — Data at scale
 
 ### M8 — The events table explodes
-- **Pain (demonstrate):** k6 against Videira (not Bugio!) with a mix of normal + broken
-  traffic for 30–60 min. Every failure crosses both systems. With millions of rows in
-  `events`, Bugio's panel ("errors in the last 24h" charts) gets slow; `EXPLAIN ANALYZE`
-  as evidence.
-- **Solution:** native Postgres partitioning on `events` by date; pre-computed
-  aggregations (materialized views or an hourly rollup table); a retention policy
-  (dropping old partitions — the #1 reason to partition); a cache layer on dashboards
-  (Solid Cache, or Redis since it's in compose from M7 — decide in the ADR).
+- **Pain (demonstrate):** drive failures through Videira so they cross the real pipeline,
+  but size the rate and duration to the development machine rather than promising millions
+  in 30–60 minutes. Supplement with deterministic mass generation if needed. Preserve
+  `EXPLAIN ANALYZE` evidence for slow "last 24h" queries.
+- **Solution (stage it):** (1) establish the dataset and query plan; (2) use native
+  Postgres date partitioning and automate retention by dropping partitions; (3) add a
+  materialized view or hourly rollup; (4) add dashboard caching only if measurements still
+  require it. Account for PostgreSQL's requirement that partitioned primary/unique keys
+  include the partition key, especially for event IDs and deduplication.
 - **Concepts:** partitioning/sharding driven by real pain, retention/TTL, cache layers,
   "what is allowed to be stale?".
-- **Done when:** dashboard <200ms with millions of events; retention drops old partitions
-  on its own. ADR-0009.
+- **Done when:** the recorded dataset size is large enough to demonstrate the original
+  bad plan, dashboard queries are <200ms on that same dataset, and retention drops old
+  partitions automatically. Attribute the improvement to partition pruning, rollups, or
+  caching separately. ADR-0009.
 
 ---
 
@@ -186,9 +216,11 @@ impossible/            # or whatever the repo ends up being called
 ### M9 — Real time
 - **Pain (demonstrate):** you keep hitting F5 on the panel waiting for a new error. New
   issues only alert via refresh.
-- **Solution:** `services/bugio-realtime` in Node/TS: consumes processed events (Redis
-  pub/sub) and pushes them to the React panel via WebSocket; simple alert rules ("new
-  issue" / "spike of N in M minutes").
+- **Solution:** `services/bugio-realtime` in Node/TS consumes processed-event Redis
+  Pub/Sub messages and pushes them to the React panel via WebSocket. Pub/Sub is acceptable
+  for ephemeral UI updates that a refresh can recover. Alert rules ("new issue" / "spike
+  of N in M minutes") use a durable Redis Stream or persisted outbox so a disconnected
+  alert consumer does not silently lose notifications.
 - **Concepts:** WebSockets, pub/sub, the case where Node genuinely shines; TS frontend
   and backend talking through shared types (a `packages/` module with the event types).
 - **Done when:** a forced error in Videira appears on the open panel WITHOUT refresh,

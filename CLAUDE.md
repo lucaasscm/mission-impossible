@@ -15,6 +15,10 @@ A **learning project** monorepo with two products that feed each other:
 Decisions live in `docs/adr/` (one file per decision, one paragraph:
 "Problem X. Considered A and B. Chose B because...").
 
+M0 through M6-B is the complete core project. M7 through M9 are conditional expansion;
+M7-G and M10 through M13 are optional research. Do not make optional milestones part of
+the definition of a finished project.
+
 ## ⚠️ Claude's role in this repo — READ FIRST
 
 This is a learning project. The repo owner's goal is to LEARN the concepts, not
@@ -86,11 +90,15 @@ sure you want me to write it?") and then comply.
   Do not suggest Go outside of it.
 - **Removed on purpose**: `image_processing`/`libvips` (unused — re-add with
   `ruby-vips` only if Active Storage previews/thumbnails are ever wanted).
-- **Local infra**: docker-compose with Postgres and MinIO. Redis only enters at M7
-  (a queue the Node ingestor can write to) and stays for M9 pub/sub. No real cloud;
-  Floci (GCP emulator) only in the optional M13.
+- **Local infra**: docker-compose with Postgres and MinIO. Redis enters at M7 if
+  extraction is justified, otherwise no earlier than M9. Durable cross-language ingestion
+  uses Redis Streams with a dedicated Ruby consumer — Solid Queue is database-backed and
+  does not consume Redis. Pub/Sub is only for recoverable M9 UI updates; durable alerts
+  use a stream or outbox. No real cloud; Floci (GCP emulator) only in the optional M13.
 - **Contract between services**: Bugio's event format is defined in ADR-0005 and
-  versioned; contract changes require a new ADR. Shared TS types in `packages/`.
+  versioned; project identity enters the envelope and ingest credentials enter the
+  authenticated transport at that milestone. Contract changes require a new ADR. SDK
+  failures must never break the instrumented application. Shared TS types in `packages/`.
 
 ## Commands
 

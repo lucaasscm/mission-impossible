@@ -33,6 +33,19 @@ services:
       retries: 20
       start_period: 20s
 
+  videira_worker:
+    build: apps/videira
+    command: ./bin/jobs
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+    volumes:
+      - ./apps/videira/config/master.key:/rails/config/master.key:ro
+      - videira_storage:/rails/storage
+    depends_on:
+      videira:
+        condition: service_healthy
+
 volumes:
   pgdata:
   videira_storage:

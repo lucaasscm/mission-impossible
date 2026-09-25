@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_28_213760) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_24_233500) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -61,9 +61,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_28_213760) do
 
   create_table "videos", force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.text "failure_reason"
+    t.datetime "processing_heartbeat_at"
+    t.string "processing_job_id"
+    t.datetime "processing_started_at"
+    t.string "processing_token"
+    t.string "status", default: "queued", null: false
     t.string "title"
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
+    t.index ["processing_heartbeat_at"], name: "index_videos_on_processing_heartbeat_at"
+    t.index ["processing_started_at"], name: "index_videos_on_processing_started_at"
+    t.index ["status"], name: "index_videos_on_status"
     t.index ["user_id"], name: "index_videos_on_user_id"
   end
 

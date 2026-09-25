@@ -1,6 +1,8 @@
 Rails.application.routes.draw do
   root "videos#index"
-  resources :videos, only: %i[index show new create]
+  resources :videos, only: %i[index show new create] do
+    get :status, on: :member
+  end
 
   resource :session
   resources :passwords, param: :token

@@ -1,8 +1,27 @@
 <% content_for :title, "#{@video.title} · Videira" %>
 <p class="mb-6"><%= link_to "← All videos", root_path, class: "text-sm text-plum-400 hover:text-plum-100 transition-colors" %></p>
 
-<%= video_tag url_for(@video.file), controls: true, preload: "metadata",
-      class: "w-full aspect-video rounded-xl bg-black ring-1 ring-plum-700 shadow-[0_30px_80px_-30px_rgba(124,58,237,0.5)]" %>
+<% if @video.ready? %>
+  <%= video_tag url_for(@video.playback_file), controls: true, preload: "metadata",
+        class: "w-full aspect-video rounded-xl bg-black ring-1 ring-plum-700 shadow-[0_30px_80px_-30px_rgba(124,58,237,0.5)]" %>
+<% elsif @video.failed? %>
+  <div class="w-full aspect-video rounded-xl bg-plum-900 ring-1 ring-red-900 flex items-center justify-center px-8 text-center">
+    <div>
+      <p class="text-lg text-red-200">This video could not be processed.</p>
+      <p class="mt-2 text-sm text-plum-400">The original upload was preserved.</p>
+    </div>
+  </div>
+<% else %>
+  <div class="w-full aspect-video rounded-xl bg-plum-900 ring-1 ring-plum-700 flex items-center justify-center px-8 text-center"
+       data-controller="video-status-poll"
+       data-video-status-poll-url-value="<%= status_video_path(@video) %>"
+       data-video-status-poll-status-value="<%= @video.status %>">
+    <div>
+      <p class="text-lg"><%= @video.processing? ? "Processing video…" : "Waiting for processing…" %></p>
+      <p class="mt-2 text-sm text-plum-400">You can leave this page. Processing continues in the background.</p>
+    </div>
+  </div>
+<% end %>
 
 <h1 class="title text-4xl mt-8 mb-2"><%= @video.title %></h1>
-<p class="text-sm text-plum-400"><%= @video.user.email_address %> · <%= number_to_human_size(@video.file.byte_size) %> · <%= @video.created_at.to_date %></p>
+<p class="text-sm text-plum-400"><%= @video.user.email_address %> · <%= number_to_human_size(@video.file.byte_size) %> · <%= @video.created_at.to_date %> · <%= @video.status.humanize %></p>

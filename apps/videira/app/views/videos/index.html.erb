@@ -12,7 +12,7 @@
     <li>
       <%= link_to video, class: "flex items-baseline justify-between gap-6 py-4 -mx-3 px-3 rounded-md hover:bg-plum-900 transition-colors" do %>
         <span class="text-lg"><%= video.title %></span>
-        <span class="shrink-0 text-sm text-plum-400"><%= video.user.email_address %> · <%= time_ago_in_words(video.created_at) %> ago</span>
+        <span class="shrink-0 text-sm text-plum-400"><%= video.status.humanize %> · <%= video.user.email_address %> · <%= time_ago_in_words(video.created_at) %> ago</span>
       <% end %>
     </li>
   <% end %>
